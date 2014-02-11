@@ -2,17 +2,26 @@ package com.dnh.android.commons.view.sidenavigation;
 
 /**
  * Item of side navigation.
- * 
+ *
  * @author johnkil
- * 
  */
-class SideNavigationItem {
+public class SideNavigationItem {
 
     public static int DEFAULT_ICON_VALUE = -1;
 
     private int id;
     private String text;
     private int icon = DEFAULT_ICON_VALUE;
+
+    private Object value;
+
+    public Object getValue() {
+        return value;
+    }
+
+    public void setValue(Object value) {
+        this.value = value;
+    }
 
     public int getId() {
         return id;

@@ -1,40 +1,28 @@
 package com.dnh.android.commons.view.sidenavigation;
 
-import java.util.ArrayList;
-
-import org.xmlpull.v1.XmlPullParser;
-
 import android.content.Context;
-import android.content.res.XmlResourceParser;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
-import android.widget.BaseAdapter;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
 
 import com.example.side_navigation.R;
 
 /**
  * View of displaying side navigation.
  */
-public class SideNavigationView extends LinearLayout {
-    private static final String LOG_TAG = SideNavigationView.class.getSimpleName();
+public class DynamicSideNavigationView<T> extends LinearLayout {
+    private static final String LOG_TAG = DynamicSideNavigationView.class.getSimpleName();
 
     private LinearLayout navigationMenu;
     private ListView listView;
     private View outsideView;
 
-    private SideNavigationCallback callback;
-    private ArrayList<SideNavigationItem> menuItems;
+    private SideNavigationListener<T> listener;
     private Mode mMode = Mode.LEFT;
 
     public void setAdapter(ListAdapter adapter) {
@@ -52,7 +40,7 @@ public class SideNavigationView extends LinearLayout {
      *
      * @param context
      */
-    public SideNavigationView(Context context) {
+    public DynamicSideNavigationView(Context context) {
         super(context);
         load();
     }
@@ -63,7 +51,7 @@ public class SideNavigationView extends LinearLayout {
      * @param context
      * @param attrs
      */
-    public SideNavigationView(Context context, AttributeSet attrs) {
+    public DynamicSideNavigationView(Context context, AttributeSet attrs) {
         super(context, attrs);
         load();
     }
@@ -106,11 +94,11 @@ public class SideNavigationView extends LinearLayout {
                 hideMenu();
             }
         });
-        listView.setOnItemClickListener(new OnItemClickListener() {
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (callback != null) {
-                    callback.onSideNavigationItemClick(menuItems.get(position).getId());
+                if (listener != null) {
+                    listener.onSideNavigationItemClick((T)((SideNavigationItem)listView.getAdapter().getItem(position)).getValue());
                 }
                 hideMenu();
             }
@@ -118,24 +106,12 @@ public class SideNavigationView extends LinearLayout {
     }
 
     /**
-     * Setup of {@link SideNavigationCallback} for callback of item click.
+     * Setup of {@link SideNavigationCallback} for listener of item click.
      *
-     * @param callback
+     * @param listener
      */
-    public void setMenuClickCallback(SideNavigationCallback callback) {
-        this.callback = callback;
-    }
-
-    /**
-     * Setup of side menu items.
-     *
-     * @param menu - resource ID
-     */
-    public void setMenuItems(int menu) {
-        parseXml(menu);
-        if (menuItems != null && menuItems.size() > 0) {
-            listView.setAdapter(new SideNavigationAdapter());
-        }
+    public void setListener(SideNavigationListener<T> listener) {
+        this.listener = listener;
     }
 
     /**
@@ -149,10 +125,6 @@ public class SideNavigationView extends LinearLayout {
         }
         mMode = mode;
         initView();
-        // setup menu items
-        if (menuItems != null && menuItems.size() > 0) {
-            listView.setAdapter(new SideNavigationAdapter());
-        }
     }
 
     /**
@@ -236,53 +208,9 @@ public class SideNavigationView extends LinearLayout {
     }
 
     /**
-     * Parse XML describe menu.
-     *
-     * @param menu - resource ID
-     */
-    private void parseXml(int menu) {
-        menuItems = new ArrayList<SideNavigationItem>();
-        try {
-            XmlResourceParser xrp = getResources().getXml(menu);
-            xrp.next();
-            int eventType = xrp.getEventType();
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    String elemName = xrp.getName();
-                    if (elemName.equals("item")) {
-                        String textId = xrp.getAttributeValue(
-                                "http://schemas.android.com/apk/res/android",
-                                "title");
-                        String iconId = xrp.getAttributeValue(
-                                "http://schemas.android.com/apk/res/android",
-                                "icon");
-                        String resId = xrp.getAttributeValue(
-                                "http://schemas.android.com/apk/res/android",
-                                "id");
-                        SideNavigationItem item = new SideNavigationItem();
-                        item.setId(Integer.valueOf(resId.replace("@", "")));
-                        item.setText(resourceIdToString(textId));
-                        if (iconId != null) {
-                            try {
-                                item.setIcon(Integer.valueOf(iconId.replace("@", "")));
-                            } catch (NumberFormatException e) {
-                                Log.d(LOG_TAG, "Item " + item.getId() + " not have icon");
-                            }
-                        }
-                        menuItems.add(item);
-                    }
-                }
-                eventType = xrp.next();
-            }
-        } catch (Exception e) {
-            Log.w(LOG_TAG, e);
-        }
-    }
-
-    /**
      * Convert resource ID to String.
      *
-     * @param text
+     * @param resId
      * @return
      */
     private String resourceIdToString(String resId) {
@@ -292,59 +220,6 @@ public class SideNavigationView extends LinearLayout {
             String id = resId.replace("@", "");
             return getResources().getString(Integer.valueOf(id));
         }
-    }
-
-    private class SideNavigationAdapter extends BaseAdapter {
-        private LayoutInflater inflater;
-
-        public SideNavigationAdapter() {
-            inflater = LayoutInflater.from(getContext());
-        }
-
-        @Override
-        public int getCount() {
-            return menuItems.size();
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return null;
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return 0;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            final ViewHolder holder;
-            if (convertView == null) {
-                convertView = inflater.inflate(R.layout.side_navigation_item, null);
-                holder = new ViewHolder();
-                holder.text = (TextView) convertView.findViewById(R.id.side_navigation_item_text);
-                holder.icon = (ImageView) convertView.findViewById(R.id.side_navigation_item_icon);
-                convertView.setTag(holder);
-            } else {
-                holder = (ViewHolder) convertView.getTag();
-            }
-
-            SideNavigationItem item = menuItems.get(position);
-            holder.text.setText(menuItems.get(position).getText());
-            if (item.getIcon() != SideNavigationItem.DEFAULT_ICON_VALUE) {
-                holder.icon.setVisibility(View.VISIBLE);
-                holder.icon.setImageResource(menuItems.get(position).getIcon());
-            } else {
-                holder.icon.setVisibility(View.GONE);
-            }
-            return convertView;
-        }
-
-        class ViewHolder {
-            TextView text;
-            ImageView icon;
-        }
-
     }
 
 }

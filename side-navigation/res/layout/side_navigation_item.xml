@@ -6,7 +6,7 @@
     android:paddingBottom="@dimen/side_navigation_item_padding_topbottom"
     android:paddingLeft="@dimen/side_navigation_item_padding_leftright"
     android:paddingRight="@dimen/side_navigation_item_padding_leftright"
-    android:paddingTop="@dimen/side_navigation_item_padding_topbottom" >
+    android:paddingTop="@dimen/side_navigation_item_padding_topbottom">
 
     <ImageView
         android:id="@+id/side_navigation_item_icon"
